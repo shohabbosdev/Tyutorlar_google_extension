@@ -93,6 +93,27 @@ function extractTutorData() {
   };
 }
 
+// Function to make group numbers clickable
+function makeGroupsClickable(groups) {
+  if (!groups) return '';
+  
+  // Split groups by comma and create clickable links
+  const groupArray = groups.split(',');
+  const clickableGroups = groupArray.map(group => {
+    // Clean the group name by removing any special characters or symbols
+    const trimmedGroup = group.trim().replace(/[^\d\-\w]/g, '');
+    if (trimmedGroup) {
+      // Create a link to the group search page with the group name as search parameter
+      return `<a href="https://hemis.jbnuu.uz/student/group?EGroup[search]=${encodeURIComponent(trimmedGroup)}" 
+                target="_blank" 
+                style="color: #667eea; text-decoration: underline; margin-right: 2px;">${trimmedGroup}</a>`;
+    }
+    return group.trim();
+  });
+  
+  return clickableGroups.join(', ');
+}
+
 // Listen for messages from the popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'extractTutors') {
@@ -131,6 +152,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           const tutors = [];
           const rows = targetTable.querySelectorAll('tbody tr');
           
+          // First, collect all group names to fetch their student counts
+          const groupNames = [];
+          const tutorData = [];
+          
           rows.forEach(row => {
             const cells = row.querySelectorAll('td');
             if (cells.length >= 5) {
@@ -163,22 +188,138 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                   groupCount = groups.split(',').filter(group => group.trim() !== '').length;
                 }
                 
-                tutors.push({
+                // Collect group names for student count fetching
+                const groupArray = groups.split(',');
+                groupArray.forEach(group => {
+                  const trimmedGroup = group.trim().replace(/[^\d\-\w]/g, '');
+                  if (trimmedGroup) {
+                    groupNames.push(trimmedGroup);
+                  }
+                });
+                
+                tutorData.push({
                   fullName: fullName,
                   faculty: faculty,
                   groups: groups,
-                  groupCount: groupCount
+                  groupCount: groupCount,
+                  groupArray: groupArray
                 });
               }
             }
           });
           
-          // Sort tutors by full name alphabetically (case insensitive)
-          tutors.sort((a, b) => {
-            return a.fullName.localeCompare(b.fullName, 'uz', { sensitivity: 'base' });
-          });
+          // Optimization: Limit the number of concurrent requests to avoid overwhelming the server
+          // Process groups in batches of 5 to reduce server load and improve performance
+          const batchSize = 5;
+          const batches = [];
+          for (let i = 0; i < groupNames.length; i += batchSize) {
+            batches.push(groupNames.slice(i, i + batchSize));
+          }
           
-          sendResponse({ tutors: tutors, isCorrectPage: true, fetchedRemotely: true });
+          // Process batches sequentially to avoid overwhelming the server
+          let groupStudentMap = {};
+          let batchIndex = 0;
+          
+          function processBatch() {
+            if (batchIndex >= batches.length) {
+              // All batches processed, now compile the results
+              compileResults();
+              return;
+            }
+            
+            const currentBatch = batches[batchIndex];
+            Promise.all(currentBatch.map(groupName => 
+              fetch(`https://hemis.jbnuu.uz/student/group?EGroup[search]=${encodeURIComponent(groupName)}`)
+                .then(response => response.text())
+                .catch(error => {
+                  console.warn(`Failed to fetch data for group ${groupName}:`, error);
+                  return ''; // Return empty string on error
+                })
+            ))
+            .then(batchResults => {
+              // Process results for this batch
+              batchResults.forEach((pageHtml, index) => {
+                if (!pageHtml) return; // Skip if fetch failed
+                
+                const groupName = currentBatch[index];
+                const pageDoc = parser.parseFromString(pageHtml, 'text/html');
+                
+                // Find the group table with the specific structure
+                // Looking for: div#data-grid > div.box-body.no-padding > table.table.table-responsive.table-striped.table-hover
+                const dataGrid = pageDoc.querySelector('#data-grid');
+                if (dataGrid) {
+                  const boxBody = dataGrid.querySelector('.box-body.no-padding');
+                  if (boxBody) {
+                    const groupTable = boxBody.querySelector('table.table.table-responsive.table-striped.table-hover');
+                    if (groupTable) {
+                      const groupRows = groupTable.querySelectorAll('tbody tr');
+                      for (let row of groupRows) {
+                        const cells = row.querySelectorAll('td');
+                        // Check if this row contains our group (first column)
+                        if (cells.length > 0 && cells[0].textContent.trim() === groupName) {
+                          // Extract student count from 7th column (index 6)
+                          if (cells.length >= 7) {
+                            const studentCountText = cells[6].textContent.trim();
+                            const studentCount = parseInt(studentCountText, 10);
+                            if (!isNaN(studentCount)) {
+                              groupStudentMap[groupName] = studentCount;
+                            }
+                          }
+                          break;
+                        }
+                      }
+                    }
+                  }
+                }
+              });
+              
+              // Move to next batch
+              batchIndex++;
+              setTimeout(processBatch, 100); // Small delay to prevent overwhelming
+            })
+            .catch(error => {
+              console.error('Error processing batch:', error);
+              batchIndex++;
+              setTimeout(processBatch, 100); // Continue with next batch even if current fails
+            });
+          }
+          
+          function compileResults() {
+            // Add student counts to tutor data
+            tutorData.forEach(tutor => {
+              const groupStudents = [];
+              let totalStudents = 0;
+              
+              tutor.groupArray.forEach(group => {
+                const trimmedGroup = group.trim().replace(/[^\d\-\w]/g, '');
+                if (trimmedGroup && groupStudentMap[trimmedGroup]) {
+                  groupStudents.push(groupStudentMap[trimmedGroup]);
+                  totalStudents += groupStudentMap[trimmedGroup];
+                } else {
+                  groupStudents.push(0);
+                }
+              });
+              
+              tutors.push({
+                fullName: tutor.fullName,
+                faculty: tutor.faculty,
+                groups: tutor.groups,
+                groupCount: tutor.groupCount,
+                groupStudents: groupStudents,
+                totalStudents: totalStudents
+              });
+            });
+            
+            // Sort tutors by full name alphabetically (case insensitive)
+            tutors.sort((a, b) => {
+              return a.fullName.localeCompare(b.fullName, 'uz', { sensitivity: 'base' });
+            });
+            
+            sendResponse({ tutors: tutors, isCorrectPage: true, fetchedRemotely: true });
+          }
+          
+          // Start processing batches
+          processBatch();
         } else {
           sendResponse({ tutors: [], isCorrectPage: false, fetchedRemotely: true });
         }

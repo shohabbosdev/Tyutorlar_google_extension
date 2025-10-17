@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!response.isCorrectPage && response.needsRemoteFetch) {
           // Try to fetch data from the tutor-group page
           loadingElement.style.display = 'block';
-          loadingElement.innerHTML = '<div class="no-data">Ma\'lumotlar yuklanmoqda...</div>';
+          loadingElement.innerHTML = '<div class="no-data">Ma\'lumotlar yuklanmoqda...<br><small style="color: #999;">Bu biroz vaqt olishi mumkin</small></div>';
           
           chrome.tabs.sendMessage(tabs[0].id, {action: 'fetchTutorsFromRemote'}, function(remoteResponse) {
             if (chrome.runtime.lastError) {
@@ -38,6 +38,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadingElement.innerHTML = '<div class="no-data">Guruhlari mavjud bo\'lgan tutorlar topilmadi</div>';
                 return;
               }
+              
+              // Calculate total student count
+              let totalStudentCount = 0;
+              remoteResponse.tutors.forEach(tutor => {
+                totalStudentCount += tutor.totalStudents || 0;
+              });
               
               // Populate the table with tutor data (only tutors with groups)
               remoteResponse.tutors.forEach((tutor, index) => {
@@ -55,7 +61,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 facultyCell.textContent = tutor.faculty;
                 
                 const groupsCell = document.createElement('td');
-                groupsCell.textContent = tutor.groups;
+                groupsCell.innerHTML = makeGroupsClickable(tutor.groups, tutor.groupStudents);
                 groupsCell.style.color = '#2c3e50';
                 
                 // Group count column with error handling
@@ -63,14 +69,40 @@ document.addEventListener('DOMContentLoaded', function() {
                 const groupCount = tutor.groupCount && !isNaN(tutor.groupCount) ? tutor.groupCount : 0;
                 groupCountCell.innerHTML = `<div class="group-count">${groupCount}</div>`;
                 
+                // Total students column
+                const totalStudentsCell = document.createElement('td');
+                const totalStudents = tutor.totalStudents && !isNaN(tutor.totalStudents) ? tutor.totalStudents : 0;
+                totalStudentsCell.innerHTML = `<div class="group-count">${totalStudents}</div>`;
+                
                 row.appendChild(serialCell);
                 row.appendChild(nameCell);
                 row.appendChild(facultyCell);
                 row.appendChild(groupsCell);
                 row.appendChild(groupCountCell);
+                row.appendChild(totalStudentsCell);
                 
                 tbody.appendChild(row);
               });
+              
+              // Add total student count row at the bottom
+              if (totalStudentCount > 0) {
+                const totalRow = document.createElement('tr');
+                totalRow.style.fontWeight = 'bold';
+                totalRow.style.background = '#e3f2fd';
+                
+                const totalLabelCell = document.createElement('td');
+                totalLabelCell.colSpan = 5;
+                totalLabelCell.textContent = 'Jami talabalar soni:';
+                totalLabelCell.style.textAlign = 'right';
+                
+                const totalValueCell = document.createElement('td');
+                totalValueCell.innerHTML = `<div class="group-count">${totalStudentCount}</div>`;
+                
+                totalRow.appendChild(totalLabelCell);
+                totalRow.appendChild(totalValueCell);
+                
+                tbody.appendChild(totalRow);
+              }
             } else {
               displayError('Ma\'lumotlarni yuklashda xatolik yuz berdi. Iltimos, sahifani yangilang.');
             }
@@ -84,6 +116,12 @@ document.addEventListener('DOMContentLoaded', function() {
           loadingElement.innerHTML = '<div class="no-data">Guruhlari mavjud bo\'lgan tutorlar topilmadi</div>';
           return;
         }
+        
+        // Calculate total student count
+        let totalStudentCount = 0;
+        response.tutors.forEach(tutor => {
+          totalStudentCount += tutor.totalStudents || 0;
+        });
         
         // Populate the table with tutor data (only tutors with groups)
         response.tutors.forEach((tutor, index) => {
@@ -101,7 +139,7 @@ document.addEventListener('DOMContentLoaded', function() {
           facultyCell.textContent = tutor.faculty;
           
           const groupsCell = document.createElement('td');
-          groupsCell.textContent = tutor.groups;
+          groupsCell.innerHTML = makeGroupsClickable(tutor.groups, tutor.groupStudents);
           groupsCell.style.color = '#2c3e50';
           
           // Group count column with error handling
@@ -109,14 +147,40 @@ document.addEventListener('DOMContentLoaded', function() {
           const groupCount = tutor.groupCount && !isNaN(tutor.groupCount) ? tutor.groupCount : 0;
           groupCountCell.innerHTML = `<div class="group-count">${groupCount}</div>`;
           
+          // Total students column
+          const totalStudentsCell = document.createElement('td');
+          const totalStudents = tutor.totalStudents && !isNaN(tutor.totalStudents) ? tutor.totalStudents : 0;
+          totalStudentsCell.innerHTML = `<div class="group-count">${totalStudents}</div>`;
+          
           row.appendChild(serialCell);
           row.appendChild(nameCell);
           row.appendChild(facultyCell);
           row.appendChild(groupsCell);
           row.appendChild(groupCountCell);
+          row.appendChild(totalStudentsCell);
           
           tbody.appendChild(row);
         });
+        
+        // Add total student count row at the bottom
+        if (totalStudentCount > 0) {
+          const totalRow = document.createElement('tr');
+          totalRow.style.fontWeight = 'bold';
+          totalRow.style.background = '#e3f2fd';
+          
+          const totalLabelCell = document.createElement('td');
+          totalLabelCell.colSpan = 5;
+          totalLabelCell.textContent = 'Jami talabalar soni:';
+          totalLabelCell.style.textAlign = 'right';
+          
+          const totalValueCell = document.createElement('td');
+          totalValueCell.innerHTML = `<div class="group-count">${totalStudentCount}</div>`;
+          
+          totalRow.appendChild(totalLabelCell);
+          totalRow.appendChild(totalValueCell);
+          
+          tbody.appendChild(totalRow);
+        }
       } else {
         // Handle case when content script returns no data
         displayError('Ma\'lumotlarni yuklashda xatolik yuz berdi. Iltimos, sahifani yangilang.');
@@ -124,6 +188,83 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 });
+
+// Function to make group numbers clickable with student count
+function makeGroupsClickable(groups, groupStudents) {
+  if (!groups) return '';
+  
+  // Split groups by comma and create clickable links
+  const groupArray = groups.split(',');
+  const clickableGroups = groupArray.map((group, index) => {
+    // Clean the group name by removing any special characters or symbols
+    const trimmedGroup = group.trim().replace(/[^\d\-\w]/g, '');
+    if (trimmedGroup) {
+      // Get student count for this group if available
+      let studentCount = '';
+      if (groupStudents && groupStudents[index]) {
+        studentCount = ` (${groupStudents[index]} ta)`;
+      }
+      
+      // Create a link that will open the group page and fill the search field
+      // Use data attributes instead of inline onclick handlers to avoid CSP issues
+      return `<a href="https://hemis.jbnuu.uz/student/group?EGroup[search]=${encodeURIComponent(trimmedGroup)}" 
+                target="_blank" 
+                class="group-link"
+                data-group="${trimmedGroup}"
+                style="color: #667eea; text-decoration: underline; margin-right: 2px;">${trimmedGroup}${studentCount}</a>`;
+    }
+    return group.trim();
+  });
+  
+  return clickableGroups.join(', ');
+}
+
+// Add event listener for group links to avoid CSP issues
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('group-link')) {
+    e.preventDefault();
+    const groupName = e.target.getAttribute('data-group');
+    fillSearchAndNavigate(groupName);
+  }
+});
+
+// Function to fill search field and navigate to group page
+function fillSearchAndNavigate(groupName) {
+  // Open the group page in a new tab
+  chrome.tabs.create({url: 'https://hemis.jbnuu.uz/student/group'}, function(tab) {
+    // Wait a bit for the page to load, then inject script to fill the search field
+    setTimeout(function() {
+      chrome.tabs.executeScript(tab.id, {
+        code: `
+          // Wait for the page to fully load
+          setTimeout(function() {
+            // Try to find the search input field
+            var searchInput = document.getElementById('egroup-search');
+            if (searchInput) {
+              // Fill the search field with the group name
+              searchInput.value = '${groupName}';
+              // Trigger input event to update the UI
+              var event = new Event('input', { bubbles: true });
+              searchInput.dispatchEvent(event);
+              // Trigger change event
+              var changeEvent = new Event('change', { bubbles: true });
+              searchInput.dispatchEvent(changeEvent);
+              // Try to submit the form or trigger search
+              var form = searchInput.closest('form');
+              if (form) {
+                // Try to find and click search button
+                var searchButton = form.querySelector('button[type="submit"]');
+                if (searchButton) {
+                  searchButton.click();
+                }
+              }
+            }
+          }, 1000);
+        `
+      });
+    }, 2000); // Wait 2 seconds for page to load
+  });
+}
 
 // Function to display error messages
 function displayError(message) {

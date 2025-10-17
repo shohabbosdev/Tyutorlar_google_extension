@@ -10,6 +10,7 @@ Ushbu kengaytma HEMIS tizimining "Tyutor guruhlari" sahifasidan faqat guruhlari 
 - Fakulteti
 - Guruhlari
 - Guruhlar soni (har bir tutorning nechta guruhga mas'ul ekanligi)
+- Jami talabalar soni (barcha guruhlardagi talabalar soni yig'indisi)
 
 Ma'lumotlar "To'liq ismi" bo'yicha alifbo tartibida saralanadi.
 
@@ -32,6 +33,14 @@ Kengaytma quyidagi holatlarda ishlaydi:
 - Ma'lumotlar avtomatik ravishda HEMIS tutor guruhlari sahifasidan olinadi
 - Sahifada guruhlari mavjud bo'lgan tutorlar bo'lmasa, bu haqda xabar beradi
 - Ma'lumotlarni yuklashda xatolik yuz bersa, qo'llanma ko'rsatadi
+
+## Xususiyatlar
+
+- Guruh nomlari bosish mumkin bo'lgan havolalar sifatida ko'rsatiladi
+- Har bir guruh nomi yonida talabalar soni ko'rsatiladi (masalan: 152-23 (22 ta))
+- Har bir tutor uchun jami talabalar soni hisoblanadi
+- Barcha tutorlar uchun umumiy talabalar soni jadval oxirida ko'rsatiladi
+- Guruhlar alifbo tartibida saralanadi
 
 ## Xatoliklarni tuzatish
 

@@ -2,13 +2,14 @@
   "manifest_version": 3,
   "name": "Tyutorlar",
   "version": "1.0",
-  "description": "Extracts tutor information with groups from HEMIS system pages",
+  "description": "Tyturolarga biriktirilgan guruhlar haqida ma'lumotlar olish",
   "permissions": [
-    "activeTab"
+    "activeTab",
+    "tabs"
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Extract Tutor Groups"
+    "default_title": "Tyutordagi guruh davomatini olish"
   },
   "content_scripts": [
     {
