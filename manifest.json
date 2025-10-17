@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Tyutorlar",
+  "version": "1.0",
+  "description": "Extracts tutor information with groups from HEMIS system pages",
+  "permissions": [
+    "activeTab"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Extract Tutor Groups"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://hemis.jbnuu.uz/*"],
+      "js": ["content.js"]
+    }
+  ]
+}
