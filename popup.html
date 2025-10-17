@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <style>
     body {
-      width: 700px;
+      width: 750px;
       min-height: 400px;
       padding: 20px;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -66,6 +66,15 @@
       padding: 2px 6px;
       font-size: 12px;
     }
+    .group-count {
+      text-align: center;
+      font-weight: bold;
+      background-color: #27ae60;
+      color: white;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 12px;
+    }
     #loading {
       text-align: center;
       padding: 30px;
@@ -81,7 +90,7 @@
   </style>
 </head>
 <body>
-  <h1>Tyutorlar jadvali</h1>
+  <h1>HEMIS Tutor Groups Information</h1>
   <div id="data-container">
     <table id="tutor-table">
       <thead>
@@ -90,6 +99,7 @@
           <th>To'liq ismi</th>
           <th>Fakultet</th>
           <th>Guruhlar</th>
+          <th style="width: 100px;">Guruhlar soni</th>
         </tr>
       </thead>
       <tbody id="tutor-data">

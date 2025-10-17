@@ -56,10 +56,17 @@ function extractTutorData() {
         
         // Only include tutors with non-empty groups
         if (groups && fullName) {
+          // Count the number of groups (split by comma and filter out empty ones)
+          let groupCount = 0;
+          if (groups && groups.trim() !== '') {
+            groupCount = groups.split(',').filter(group => group.trim() !== '').length;
+          }
+          
           tutors.push({
             fullName: fullName,
             faculty: faculty,
-            groups: groups
+            groups: groups,
+            groupCount: groupCount
           });
         }
       }
@@ -150,10 +157,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               
               // Only include tutors with non-empty groups
               if (groups && fullName) {
+                // Count the number of groups (split by comma and filter out empty ones)
+                let groupCount = 0;
+                if (groups && groups.trim() !== '') {
+                  groupCount = groups.split(',').filter(group => group.trim() !== '').length;
+                }
+                
                 tutors.push({
                   fullName: fullName,
                   faculty: faculty,
-                  groups: groups
+                  groups: groups,
+                  groupCount: groupCount
                 });
               }
             }
@@ -174,6 +188,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ tutors: [], isCorrectPage: false, error: error.message });
       });
     
+    // Return true to indicate that sendResponse will be called asynchronously
     return true;
   }
   return true;

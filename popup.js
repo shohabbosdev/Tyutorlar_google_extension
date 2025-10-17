@@ -58,10 +58,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 groupsCell.textContent = tutor.groups;
                 groupsCell.style.color = '#2c3e50';
                 
+                // Group count column with error handling
+                const groupCountCell = document.createElement('td');
+                const groupCount = tutor.groupCount && !isNaN(tutor.groupCount) ? tutor.groupCount : 0;
+                groupCountCell.innerHTML = `<div class="group-count">${groupCount}</div>`;
+                
                 row.appendChild(serialCell);
                 row.appendChild(nameCell);
                 row.appendChild(facultyCell);
                 row.appendChild(groupsCell);
+                row.appendChild(groupCountCell);
                 
                 tbody.appendChild(row);
               });
@@ -98,10 +104,16 @@ document.addEventListener('DOMContentLoaded', function() {
           groupsCell.textContent = tutor.groups;
           groupsCell.style.color = '#2c3e50';
           
+          // Group count column with error handling
+          const groupCountCell = document.createElement('td');
+          const groupCount = tutor.groupCount && !isNaN(tutor.groupCount) ? tutor.groupCount : 0;
+          groupCountCell.innerHTML = `<div class="group-count">${groupCount}</div>`;
+          
           row.appendChild(serialCell);
           row.appendChild(nameCell);
           row.appendChild(facultyCell);
           row.appendChild(groupsCell);
+          row.appendChild(groupCountCell);
           
           tbody.appendChild(row);
         });
